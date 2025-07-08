@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOL Barcode Scanner</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>BOL Barcode Scanner</h1>
+            <p>Scan your BOL barcode to automatically generate JDE Orchestrator Studio orders</p>
+        </header>
+        
+        <main>
+            <div class="scanner-section">
+                <div class="input-group">
+                    <label for="barcodeInput">Barcode Data:</label>
+                    <input type="text" id="barcodeInput" placeholder="Scan or paste barcode data here..." autofocus>
+                    <div class="input-hint">
+                        Example: &lt;B364-99537&gt;&lt;T531056&gt;&lt;L2&gt;&lt;PRFCGT380A&gt;&lt;Q33&gt;&lt;PN108836&gt;&lt;PRFCGT510A&gt;&lt;Q12&gt;&lt;PN108632&gt;
+                    </div>
+                </div>
+                
+                <div class="status-section">
+                    <div id="statusMessage" class="status-message"></div>
+                    <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+                        <div class="spinner"></div>
+                        <span>Processing...</span>
+                    </div>
+                </div>
+                
+                <div class="parsed-data" id="parsedData" style="display: none;">
+                    <h3>Parsed Data:</h3>
+                    <div id="parsedDataContent"></div>
+                </div>
+                
+                <div class="json-output" id="jsonOutput" style="display: none;">
+                    <h3>Generated JSON:</h3>
+                    <pre id="jsonContent"></pre>
+                </div>
+            </div>
+            
+            <div class="actions">
+                <button id="clearBtn" class="btn btn-secondary">Clear</button>
+                <button id="manualEntryBtn" class="btn btn-primary">Manual Entry</button>
+                <button id="submitBtn" class="btn btn-success" style="display: none;">Submit to JDE</button>
+                <a href="troubleshooting.html" class="btn btn-secondary" style="text-decoration: none;">Network Help</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="jde-config.js"></script>
+    <script src="network-status.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

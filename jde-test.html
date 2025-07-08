@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JDE Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin: 20px auto;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>JDE Connection Test</h1>
+        
+        <div class="test-info">
+            <strong>Testing Connection To:</strong><br>
+            URL: http://rglnpweb1.jgi.local:8220/jderest/orchestrator/EnterSalesOrders<br>
+            Environment: JDV920<br>
+            Device: rellman01<br>
+            User: mrochelle@jamesgroupintl.com
+        </div>
+        
+        <button class="button" onclick="testJDEConnection()">Test JDE Connection</button>
+        
+        <div id="result" class="result"></div>
+        
+        <div style="margin-top: 30px; text-align: center;">
+            <a href="index.html" style="color: #007bff; text-decoration: none;">← Back to Main App</a>
+        </div>
+    </div>
+
+    <script src="jde-config.js"></script>
+    <script>
+        async function testJDEConnection() {
+            const resultDiv = document.getElementById('result');
+            const button = document.querySelector('.button');
+            
+            // Show loading state
+            button.disabled = true;
+            button.textContent = 'Testing...';
+            resultDiv.innerHTML = 'Testing JDE connection...';
+            resultDiv.className = 'result loading';
+            resultDiv.style.display = 'block';
+            
+            try {
+                // Create a simple test payload
+                const testPayload = {
+                    "ServiceRequest1": {
+                        "forms": [
+                            {
+                                "fs_P4210_W4210A": {
+                                    "title": "Sales Order Detail Revisions",
+                                    "data": {
+                                        "z_MCU_11": {
+                                            "title": "Business Unit",
+                                            "value": JDE_CONFIG.defaults.businessUnit
+                                        },
+                                        "z_DCTO_21": {
+                                            "title": "Order Type",
+                                            "value": JDE_CONFIG.defaults.orderType
+                                        },
+                                        "z_TRDJ_748": {
+                                            "title": "Date - Order/Transaction",
+                                            "value": "20250708"
+                                        },
+                                        "z_DOCO_757": {
+                                            "title": "Document (Order No, Invoice, etc.)",
+                                            "value": "TEST-001"
+                                        },
+                                        "z_ALKY_800": {
+                                            "title": "Long Address Number",
+                                            "value": JDE_CONFIG.defaults.addressNumber1
+                                        },
+                                        "z_ALKY_802": {
+                                            "title": "Long Address Number",
+                                            "value": JDE_CONFIG.defaults.addressNumber2
+                                        },
+                                        "gridData": {
+                                            "id": 1,
+                                            "fullGridId": "1",
+                                            "columns": {
+                                                "z_DRQJ_165": "Requested Date",
+                                                "z_UOM_52": "UoM",
+                                                "z_UORG_53": "Quantity Ordered",
+                                                "z_VR01_608": "Customer PO",
+                                                "z_UNCS_836": "Purchase Order Unit Cost",
+                                                "z_UITM_89": "Item Number"
+                                            },
+                                            "rowset": [
+                                                {
+                                                    "z_DRQJ_165": "20250708",
+                                                    "z_UOM_52": "EA",
+                                                    "z_UORG_53": 1,
+                                                    "z_VR01_608": "TEST-PO",
+                                                    "z_UNCS_836": 500,
+                                                    "z_UITM_89": "TEST-ITEM"
+                                                }
+                                            ],
+                                            "summary": {
+                                                "records": 1,
+                                                "moreRecords": false
+                                            }
+                                        }
+                                    },
+                                    "errors": [],
+                                    "warnings": []
+                                },
+                                "stackId": 21,
+                                "stateId": 1,
+                                "rid": "test123",
+                                "currentApp": "P4210_W4210A_DETPCA01",
+                                "timeStamp": new Date().toISOString().slice(0, 19).replace('T', ':'),
+                                "sysErrors": []
+                            }
+                        ]
+                    }
+                };
+                
+                // Make the API call
+                const response = await fetch(JDE_CONFIG.url, {
+                    method: 'POST',
+                    headers: getJDEHeaders(),
+                    body: JSON.stringify(testPayload)
+                });
+                
+                const responseText = await response.text();
+                
+                if (response.ok) {
+                    let jsonResponse;
+                    try {
+                        jsonResponse = JSON.parse(responseText);
+                    } catch (e) {
+                        jsonResponse = responseText;
+                    }
+                    
+                    resultDiv.innerHTML = `✅ Connection Successful!\n\nStatus: ${response.status}\nResponse:\n${JSON.stringify(jsonResponse, null, 2)}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = `❌ Connection Failed!\n\nStatus: ${response.status}\nResponse:\n${responseText}`;
+                    resultDiv.className = 'result error';
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Connection Error!\n\nError: ${error.message}\n\nThis could be due to:\n- Network connectivity issues\n- CORS restrictions\n- JDE server being down\n- Invalid credentials`;
+                resultDiv.className = 'result error';
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Test JDE Connection';
+            }
+        }
+    </script>
+</body>
+</html>

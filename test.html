@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOL Scanner Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .test-case {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-left: 4px solid #007bff;
+            background: #f8f9fa;
+        }
+        .test-input {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        .test-output {
+            font-family: monospace;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>BOL Barcode Scanner Test Suite</h1>
+    
+    <div class="test-container">
+        <h2>Test Cases</h2>
+        
+        <div class="test-case">
+            <h3>Test 1: Standard Barcode</h3>
+            <div class="test-input">&lt;B364-99537&gt;&lt;T531056&gt;&lt;L2&gt;&lt;PRFCGT380A&gt;&lt;Q33&gt;&lt;PN108836&gt;&lt;PRFCGT510A&gt;&lt;Q12&gt;&lt;PN108632&gt;</div>
+            <button class="button" onclick="runTest(1)">Run Test</button>
+            <div id="result1" class="test-output" style="display:none;"></div>
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 2: Single Item</h3>
+            <div class="test-input">&lt;B123-456&gt;&lt;T789012&gt;&lt;L1&gt;&lt;PRITEM001&gt;&lt;Q25&gt;&lt;PN555777&gt;</div>
+            <button class="button" onclick="runTest(2)">Run Test</button>
+            <div id="result2" class="test-output" style="display:none;"></div>
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 3: Multiple Items</h3>
+            <div class="test-input">&lt;B999-888&gt;&lt;T111222&gt;&lt;L3&gt;&lt;PRPART1&gt;&lt;Q10&gt;&lt;PN123&gt;&lt;PRPART2&gt;&lt;Q20&gt;&lt;PN456&gt;&lt;PRPART3&gt;&lt;Q30&gt;&lt;PN789&gt;</div>
+            <button class="button" onclick="runTest(3)">Run Test</button>
+            <div id="result3" class="test-output" style="display:none;"></div>
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 4: Invalid Format</h3>
+            <div class="test-input">B364-99537T531056L2PRFCGT380AQ33PN108836</div>
+            <button class="button" onclick="runTest(4)">Run Test</button>
+            <div id="result4" class="test-output" style="display:none;"></div>
+        </div>
+        
+        <button class="button" onclick="runAllTests()" style="background: #28a745;">Run All Tests</button>
+    </div>
+    
+    <div class="test-container">
+        <h2>Live Test</h2>
+        <textarea id="customInput" placeholder="Enter your own barcode data here..." style="width: 100%; height: 60px; font-family: monospace;"></textarea>
+        <button class="button" onclick="runCustomTest()">Test Custom Input</button>
+        <div id="customResult" class="test-output" style="display:none;"></div>
+    </div>
+
+    <script>
+        // Copy the parsing logic from the main app
+        const identifiers = {
+            'B': 'BOL_NUMBER',
+            'T': 'TRAILER_NUMBER',
+            'L': 'LINES',
+            'PR': 'ITEM_NUMBER',
+            'Q': 'QUANTITY',
+            'PN': 'PO_NUMBER'
+        };
+
+        function parseBarcode(barcodeData) {
+            const parsed = {};
+            const items = [];
+            
+            // Split by angle brackets and process each segment
+            const segments = barcodeData.match(/<([^>]+)>/g);
+            
+            if (!segments) {
+                throw new Error('Invalid barcode format. Expected format: <identifier>value</identifier>');
+            }
+            
+            let currentItem = {};
+            
+            segments.forEach(segment => {
+                const content = segment.slice(1, -1); // Remove < and >
+                
+                // Check for identifiers
+                for (const [id, name] of Object.entries(identifiers)) {
+                    if (content.startsWith(id)) {
+                        const value = content.substring(id.length);
+                        
+                        if (id === 'B') {
+                            parsed.BOL_NUMBER = value;
+                        } else if (id === 'T') {
+                            parsed.TRAILER_NUMBER = value;
+                        } else if (id === 'L') {
+                            parsed.LINES = parseInt(value);
+                        } else if (id === 'PR') {
+                            // Start new item
+                            if (Object.keys(currentItem).length > 0) {
+                                items.push(currentItem);
+                            }
+                            currentItem = { ITEM_NUMBER: value };
+                        } else if (id === 'Q') {
+                            currentItem.QUANTITY = parseInt(value);
+                        } else if (id === 'PN') {
+                            currentItem.PO_NUMBER = value;
+                        }
+                        break;
+                    }
+                }
+            });
+            
+            // Add the last item
+            if (Object.keys(currentItem).length > 0) {
+                items.push(currentItem);
+            }
+            
+            parsed.ITEMS = items;
+            return parsed;
+        }
+
+        const testCases = [
+            "<B364-99537><T531056><L2><PRFCGT380A><Q33><PN108836><PRFCGT510A><Q12><PN108632>",
+            "<B123-456><T789012><L1><PRITEM001><Q25><PN555777>",
+            "<B999-888><T111222><L3><PRPART1><Q10><PN123><PRPART2><Q20><PN456><PRPART3><Q30><PN789>",
+            "B364-99537T531056L2PRFCGT380AQ33PN108836"
+        ];
+
+        function runTest(testNumber) {
+            const input = testCases[testNumber - 1];
+            const resultDiv = document.getElementById(`result${testNumber}`);
+            
+            try {
+                const parsed = parseBarcode(input);
+                const output = JSON.stringify(parsed, null, 2);
+                
+                resultDiv.innerHTML = `<div class="success">✅ Test Passed</div><pre>${output}</pre>`;
+                resultDiv.className = 'test-output';
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Test Failed: ${error.message}</div>`;
+                resultDiv.className = 'test-output error';
+            }
+            
+            resultDiv.style.display = 'block';
+        }
+
+        function runCustomTest() {
+            const input = document.getElementById('customInput').value;
+            const resultDiv = document.getElementById('customResult');
+            
+            if (!input.trim()) {
+                resultDiv.innerHTML = '<div class="error">Please enter some barcode data</div>';
+                resultDiv.className = 'test-output error';
+                resultDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const parsed = parseBarcode(input);
+                const output = JSON.stringify(parsed, null, 2);
+                
+                resultDiv.innerHTML = `<div class="success">✅ Parse Successful</div><pre>${output}</pre>`;
+                resultDiv.className = 'test-output';
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Parse Failed: ${error.message}</div>`;
+                resultDiv.className = 'test-output error';
+            }
+            
+            resultDiv.style.display = 'block';
+        }
+
+        function runAllTests() {
+            for (let i = 1; i <= 4; i++) {
+                runTest(i);
+            }
+        }
+    </script>
+</body>
+</html>

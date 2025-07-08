@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Entry - BOL Data</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="manual-entry.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Manual BOL Entry</h1>
+            <p>Enter BOL information manually</p>
+        </header>
+        
+        <main>
+            <form id="manualEntryForm">
+                <div class="form-section">
+                    <h3>Basic Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bolNumber">BOL Number:</label>
+                            <input type="text" id="bolNumber" name="bolNumber" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="trailerNumber">Trailer Number:</label>
+                            <input type="text" id="trailerNumber" name="trailerNumber" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="lines">Number of Lines:</label>
+                            <input type="number" id="lines" name="lines" min="1" max="100" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Items</h3>
+                    <div id="itemsContainer">
+                        <!-- Items will be dynamically added here -->
+                    </div>
+                    <button type="button" id="addItemBtn" class="btn btn-secondary">Add Item</button>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Preview</h3>
+                    <div id="previewContainer" style="display: none;">
+                        <div class="json-output">
+                            <h4>Generated JSON:</h4>
+                            <pre id="previewJson"></pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="actions">
+                    <button type="button" id="backBtn" class="btn btn-secondary">Back to Scanner</button>
+                    <button type="button" id="previewBtn" class="btn btn-primary">Preview JSON</button>
+                    <button type="submit" id="submitManualBtn" class="btn btn-success">Submit to JDE</button>
+                    <a href="troubleshooting.html" class="btn btn-secondary" style="text-decoration: none;">Network Help</a>
+                </div>
+            </form>
+            
+            <div id="statusMessage" class="status-message"></div>
+            <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+                <div class="spinner"></div>
+                <span>Processing...</span>
+            </div>
+        </main>
+    </div>
+
+    <script src="jde-config.js"></script>
+    <script src="network-status.js"></script>
+    <script src="manual-entry.js"></script>
+</body>
+</html>
