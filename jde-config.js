@@ -11,7 +11,7 @@ const JDE_CONFIG = {
     // Authentication credentials
     credentials: {
         username: 'mrochelle',
-        password: 'wywxi8-qefdez'
+        password: 'hozde6-kyks'
     },
     
     // JDE environment settings
@@ -24,12 +24,36 @@ const JDE_CONFIG = {
     
     // Default values for sales orders
     defaults: {
-        businessUnit: '       53080',
+        businessUnit: '53080',
         orderType: 'SA',
         unitOfMeasure: 'EA',
         unitCost: 500,
         addressNumber1: '15212',
         addressNumber2: '15219'
+    },
+    
+    // Field validation rules
+    validation: {
+        businessUnit: {
+            required: true,
+            length: 5,
+            type: 'string'
+        },
+        orderType: {
+            required: true,
+            length: 2,
+            type: 'string'
+        },
+        addressNumber: {
+            required: true,
+            length: 5,
+            type: 'string'
+        },
+        date: {
+            required: true,
+            format: 'YYYYMMDD',
+            type: 'string'
+        }
     }
 };
 

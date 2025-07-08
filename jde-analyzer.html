@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JDE Response Analyzer</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📊%3C/text%3E%3C/svg%3E">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .analysis-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .warning {
+            background: #fff3cd;
+            border-color: #ffeeba;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .field-analysis {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .field-analysis.empty {
+            border-left-color: #ffc107;
+        }
+        .field-analysis.error {
+            border-left-color: #dc3545;
+        }
+        .field-analysis.success {
+            border-left-color: #28a745;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 JDE Response Analyzer</h1>
+        
+        <div class="analysis-section">
+            <h3>Paste JDE Response JSON</h3>
+            <textarea id="responseJson" placeholder="Paste your JDE response JSON here..."></textarea>
+            <button class="button" onclick="analyzeResponse()">Analyze Response</button>
+            <button class="button" onclick="loadSampleResponse()">Load Sample Response</button>
+        </div>
+        
+        <div id="analysisResults" style="display: none;">
+            <div class="analysis-section" id="overallStatus">
+                <h3>Overall Status</h3>
+                <div id="statusInfo"></div>
+            </div>
+            
+            <div class="analysis-section">
+                <h3>Field Analysis</h3>
+                <div id="fieldAnalysis" class="analysis-grid"></div>
+            </div>
+            
+            <div class="analysis-section">
+                <h3>Grid Data Analysis</h3>
+                <div id="gridAnalysis"></div>
+            </div>
+            
+            <div class="analysis-section">
+                <h3>Recommendations</h3>
+                <div id="recommendations"></div>
+            </div>
+        </div>
+        
+        <a href="index.html" class="back-link">← Back to Main App</a>
+    </div>
+
+    <script>
+        function loadSampleResponse() {
+            const sampleResponse = {
+                "ServiceRequest1": {
+                    "forms": [
+                        {
+                            "fs_P4210_W4210A": {
+                                "title": "Sales Order Detail Revisions",
+                                "data": {
+                                    "z_MCU_11": {
+                                        "title": "Business Unit",
+                                        "value": " "
+                                    },
+                                    "z_DCTO_21": {
+                                        "title": "Order Type",
+                                        "value": "SA"
+                                    },
+                                    "z_TRDJ_748": {
+                                        "title": "Date - Order/Transaction",
+                                        "value": null
+                                    },
+                                    "z_DOCO_757": {
+                                        "title": "Document (Order No, Invoice, etc.)",
+                                        "value": 0
+                                    },
+                                    "z_ALKY_800": {
+                                        "title": "Long Address Number",
+                                        "value": " "
+                                    },
+                                    "z_ALKY_802": {
+                                        "title": "Long Address Number",
+                                        "value": " "
+                                    },
+                                    "gridData": {
+                                        "id": 1,
+                                        "fullGridId": "1",
+                                        "columns": {
+                                            "z_DRQJ_165": "Requested Date",
+                                            "z_UOM_52": "UoM",
+                                            "z_UORG_53": "Quantity Ordered",
+                                            "z_UNCS_836": "Purchase Order Unit Cost",
+                                            "z_UITM_89": "Item Number",
+                                            "z_VR01_608": "Customer PO"
+                                        },
+                                        "rowset": [],
+                                        "summary": {
+                                            "records": 0,
+                                            "moreRecords": false
+                                        }
+                                    }
+                                },
+                                "errors": [],
+                                "warnings": []
+                            },
+                            "stackId": 1,
+                            "stateId": 1,
+                            "rid": "c3491a25810b3d2f",
+                            "currentApp": "P4210_W4210A_ZJDE0001",
+                            "timeStamp": "2025-07-08:14.48.36",
+                            "sysErrors": []
+                        }
+                    ]
+                },
+                "ServiceRequest2": {
+                    "reportName": "R42565",
+                    "reportVersion": "MR001",
+                    "jobNumber": 101740,
+                    "executionServer": "RGLNPENT1",
+                    "queueName": "QBATCH"
+                },
+                "jde__status": "SUCCESS",
+                "jde__startTimestamp": "2025-07-08T14:48:34.830-0400",
+                "jde__endTimestamp": "2025-07-08T14:48:37.269-0400",
+                "jde__serverExecutionSeconds": 2.439
+            };
+            
+            document.getElementById('responseJson').value = JSON.stringify(sampleResponse, null, 2);
+        }
+        
+        function analyzeResponse() {
+            const responseText = document.getElementById('responseJson').value;
+            const resultsDiv = document.getElementById('analysisResults');
+            
+            if (!responseText.trim()) {
+                alert('Please paste a JDE response JSON first.');
+                return;
+            }
+            
+            try {
+                const response = JSON.parse(responseText);
+                
+                // Overall status analysis
+                analyzeOverallStatus(response);
+                
+                // Field analysis
+                analyzeFields(response);
+                
+                // Grid data analysis
+                analyzeGridData(response);
+                
+                // Generate recommendations
+                generateRecommendations(response);
+                
+                resultsDiv.style.display = 'block';
+                
+            } catch (error) {
+                alert('Invalid JSON format. Please check your response data.');
+                console.error('JSON Parse Error:', error);
+            }
+        }
+        
+        function analyzeOverallStatus(response) {
+            const statusDiv = document.getElementById('statusInfo');
+            const status = response.jde__status;
+            
+            let statusClass = 'success';
+            let statusMessage = '';
+            
+            if (status === 'SUCCESS') {
+                statusMessage = `✅ <strong>Success!</strong> JDE processed the request successfully.`;
+            } else if (status === 'ERROR') {
+                statusClass = 'error';
+                statusMessage = `❌ <strong>Error!</strong> JDE encountered an error processing the request.`;
+            } else {
+                statusClass = 'warning';
+                statusMessage = `⚠️ <strong>Unknown Status:</strong> ${status}`;
+            }
+            
+            statusDiv.className = statusClass;
+            statusDiv.innerHTML = `
+                ${statusMessage}<br><br>
+                <strong>Processing Time:</strong> ${response.jde__serverExecutionSeconds}s<br>
+                <strong>Start Time:</strong> ${response.jde__startTimestamp}<br>
+                <strong>End Time:</strong> ${response.jde__endTimestamp}
+            `;
+        }
+        
+        function analyzeFields(response) {
+            const fieldDiv = document.getElementById('fieldAnalysis');
+            fieldDiv.innerHTML = '';
+            
+            try {
+                const data = response.ServiceRequest1.forms[0].fs_P4210_W4210A.data;
+                
+                const fields = [
+                    { key: 'z_MCU_11', name: 'Business Unit', expected: '53080' },
+                    { key: 'z_DCTO_21', name: 'Order Type', expected: 'SA' },
+                    { key: 'z_TRDJ_748', name: 'Transaction Date', expected: 'Current date (YYYYMMDD)' },
+                    { key: 'z_DOCO_757', name: 'Document Number', expected: 'BOL Number' },
+                    { key: 'z_ALKY_800', name: 'Address Number 1', expected: '15212' },
+                    { key: 'z_ALKY_802', name: 'Address Number 2', expected: '15219' }
+                ];
+                
+                fields.forEach(field => {
+                    const fieldData = data[field.key];
+                    const value = fieldData ? fieldData.value : 'Missing';
+                    
+                    let fieldClass = 'success';
+                    let status = '✅ OK';
+                    
+                    if (value === null || value === undefined) {
+                        fieldClass = 'error';
+                        status = '❌ NULL';
+                    } else if (value === '' || value === ' ' || value === 0) {
+                        fieldClass = 'empty';
+                        status = '⚠️ EMPTY';
+                    }
+                    
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.className = `field-analysis ${fieldClass}`;
+                    fieldDiv.innerHTML = `
+                        <strong>${field.name}</strong> ${status}<br>
+                        <strong>Current:</strong> "${value}"<br>
+                        <strong>Expected:</strong> ${field.expected}
+                    `;
+                    
+                    document.getElementById('fieldAnalysis').appendChild(fieldDiv);
+                });
+                
+            } catch (error) {
+                fieldDiv.innerHTML = '<div class="error">Error analyzing fields: ' + error.message + '</div>';
+            }
+        }
+        
+        function analyzeGridData(response) {
+            const gridDiv = document.getElementById('gridAnalysis');
+            
+            try {
+                const gridData = response.ServiceRequest1.forms[0].fs_P4210_W4210A.data.gridData;
+                const recordCount = gridData.summary.records;
+                
+                if (recordCount === 0) {
+                    gridDiv.innerHTML = `
+                        <div class="warning">
+                            ⚠️ <strong>No Records in Grid</strong><br>
+                            The rowset is empty, which means no line items were processed.<br>
+                            This could indicate that the item data was not properly formatted or accepted by JDE.
+                        </div>
+                    `;
+                } else {
+                    gridDiv.innerHTML = `
+                        <div class="success">
+                            ✅ <strong>${recordCount} Record(s) Processed</strong><br>
+                            <pre>${JSON.stringify(gridData.rowset, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                gridDiv.innerHTML = '<div class="error">Error analyzing grid data: ' + error.message + '</div>';
+            }
+        }
+        
+        function generateRecommendations(response) {
+            const recDiv = document.getElementById('recommendations');
+            const recommendations = [];
+            
+            try {
+                const data = response.ServiceRequest1.forms[0].fs_P4210_W4210A.data;
+                const gridData = data.gridData;
+                
+                // Check for empty fields
+                if (data.z_MCU_11.value === ' ' || data.z_MCU_11.value === null) {
+                    recommendations.push('🔧 Business Unit is empty - check JDE configuration for valid business unit codes');
+                }
+                
+                if (data.z_TRDJ_748.value === null) {
+                    recommendations.push('📅 Transaction Date is null - ensure date format is YYYYMMDD');
+                }
+                
+                if (data.z_ALKY_800.value === ' ' || data.z_ALKY_802.value === ' ') {
+                    recommendations.push('🏢 Address Numbers are empty - verify customer address numbers exist in JDE');
+                }
+                
+                if (gridData.summary.records === 0) {
+                    recommendations.push('📦 No line items processed - check item numbers, quantities, and PO numbers are valid');
+                    recommendations.push('🔍 Verify item numbers exist in JDE item master');
+                    recommendations.push('💰 Check if unit costs are acceptable values');
+                }
+                
+                // Check for ServiceRequest2 (report generation)
+                if (response.ServiceRequest2) {
+                    recommendations.push('📊 JDE generated a report - check report R42565 for detailed results');
+                }
+                
+                if (recommendations.length === 0) {
+                    recommendations.push('✅ Response looks good! All fields appear to be processed correctly.');
+                }
+                
+                recDiv.innerHTML = recommendations.map(rec => `<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-left: 4px solid #007bff;">${rec}</div>`).join('');
+                
+            } catch (error) {
+                recDiv.innerHTML = '<div class="error">Error generating recommendations: ' + error.message + '</div>';
+            }
+        }
+    </script>
+</body>
+</html>

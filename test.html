@@ -110,6 +110,16 @@
         <div id="customResult" class="test-output" style="display:none;"></div>
     </div>
 
+    <div class="test-container">
+        <h2>JSON Format Test</h2>
+        <div class="test-case">
+            <h3>Test JDE JSON Structure</h3>
+            <p>Testing the new JDE JSON format with proper field structure:</p>
+            <div id="json-test-output"></div>
+            <button class="button" onclick="testJDEJsonFormat()">Test JSON Format</button>
+        </div>
+    </div>
+
     <script>
         // Copy the parsing logic from the main app
         const identifiers = {
@@ -227,6 +237,163 @@
             for (let i = 1; i <= 4; i++) {
                 runTest(i);
             }
+        }
+
+        function testJDEJsonFormat() {
+            const testData = {
+                BOL_NUMBER: 'BOL12345',
+                TRAILER_NUMBER: 'TRL789',
+                LINES: 2,
+                ITEMS: [
+                    {
+                        ITEM_NUMBER: 'ITEM001',
+                        QUANTITY: 100,
+                        PO_NUMBER: 'PO12345'
+                    },
+                    {
+                        ITEM_NUMBER: 'ITEM002',
+                        QUANTITY: 50,
+                        PO_NUMBER: 'PO67890'
+                    }
+                ]
+            };
+            
+            // Create a mock scanner instance to test JSON generation
+            const mockScanner = {
+                validateJDEData: function(parsedData) {
+                    const validatedData = {
+                        BOL_NUMBER: parsedData.BOL_NUMBER || '',
+                        TRAILER_NUMBER: parsedData.TRAILER_NUMBER || '',
+                        LINES: parsedData.LINES || 0,
+                        ITEMS: []
+                    };
+                    
+                    if (parsedData.ITEMS && parsedData.ITEMS.length > 0) {
+                        parsedData.ITEMS.forEach((item, index) => {
+                            const validatedItem = {
+                                ITEM_NUMBER: (item.ITEM_NUMBER || '').toString().trim(),
+                                QUANTITY: parseInt(item.QUANTITY) || 0,
+                                PO_NUMBER: (item.PO_NUMBER || '').toString().trim()
+                            };
+                            
+                            if (validatedItem.ITEM_NUMBER && validatedItem.QUANTITY > 0) {
+                                validatedData.ITEMS.push(validatedItem);
+                            }
+                        });
+                    }
+                    
+                    return validatedData;
+                },
+                
+                generateJDEJson: function(parsedData) {
+                    const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                    const validatedData = this.validateJDEData(parsedData);
+                    
+                    const rowset = validatedData.ITEMS.map((item, index) => ({
+                        "z_DRQJ_165": {
+                            "title": "Requested Date",
+                            "value": currentDate
+                        },
+                        "z_UOM_52": {
+                            "title": "UoM",
+                            "value": JDE_CONFIG.defaults.unitOfMeasure
+                        },
+                        "z_UORG_53": {
+                            "title": "Quantity Ordered",
+                            "value": item.QUANTITY
+                        },
+                        "z_VR01_608": {
+                            "title": "Customer PO",
+                            "value": item.PO_NUMBER
+                        },
+                        "z_UNCS_836": {
+                            "title": "Purchase Order Unit Cost",
+                            "value": JDE_CONFIG.defaults.unitCost
+                        },
+                        "z_UITM_89": {
+                            "title": "Item Number",
+                            "value": item.ITEM_NUMBER
+                        },
+                        "rowIndex": index
+                    }));
+                    
+                    return {
+                        "ServiceRequest1": {
+                            "forms": [
+                                {
+                                    "fs_P4210_W4210A": {
+                                        "title": "Sales Order Detail Revisions",
+                                        "data": {
+                                            "z_MCU_11": {
+                                                "title": "Business Unit",
+                                                "value": JDE_CONFIG.defaults.businessUnit
+                                            },
+                                            "z_DCTO_21": {
+                                                "title": "Order Type",
+                                                "value": JDE_CONFIG.defaults.orderType
+                                            },
+                                            "z_TRDJ_748": {
+                                                "title": "Date - Order/Transaction",
+                                                "value": currentDate
+                                            },
+                                            "z_DOCO_757": {
+                                                "title": "Document (Order No, Invoice, etc.)",
+                                                "value": validatedData.BOL_NUMBER || ""
+                                            },
+                                            "z_ALKY_800": {
+                                                "title": "Long Address Number",
+                                                "value": JDE_CONFIG.defaults.addressNumber1
+                                            },
+                                            "z_ALKY_802": {
+                                                "title": "Long Address Number",
+                                                "value": JDE_CONFIG.defaults.addressNumber2
+                                            },
+                                            "gridData": {
+                                                "id": 1,
+                                                "fullGridId": "1",
+                                                "columns": {
+                                                    "z_DRQJ_165": "Requested Date",
+                                                    "z_UOM_52": "UoM",
+                                                    "z_UORG_53": "Quantity Ordered",
+                                                    "z_VR01_608": "Customer PO",
+                                                    "z_UNCS_836": "Purchase Order Unit Cost",
+                                                    "z_UITM_89": "Item Number"
+                                                },
+                                                "rowset": rowset,
+                                                "summary": {
+                                                    "records": rowset.length,
+                                                    "moreRecords": false
+                                                }
+                                            }
+                                        },
+                                        "errors": [],
+                                        "warnings": []
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                }
+            };
+            
+            const jdeJson = mockScanner.generateJDEJson(testData);
+            
+            const output = document.getElementById('json-test-output');
+            output.innerHTML = `
+                <div class="test-output">
+                    <strong>Generated JDE JSON:</strong><br>
+                    ${JSON.stringify(jdeJson, null, 2)}
+                </div>
+                <div class="test-output">
+                    <strong>Key Validations:</strong><br>
+                    Business Unit: ${jdeJson.ServiceRequest1.forms[0].fs_P4210_W4210A.data.z_MCU_11.value}<br>
+                    Date: ${jdeJson.ServiceRequest1.forms[0].fs_P4210_W4210A.data.z_TRDJ_748.value}<br>
+                    Address Number 1: ${jdeJson.ServiceRequest1.forms[0].fs_P4210_W4210A.data.z_ALKY_800.value}<br>
+                    Address Number 2: ${jdeJson.ServiceRequest1.forms[0].fs_P4210_W4210A.data.z_ALKY_802.value}<br>
+                    Grid Records: ${jdeJson.ServiceRequest1.forms[0].fs_P4210_W4210A.data.gridData.rowset.length}<br>
+                    First Item: ${jdeJson.ServiceRequest1.forms[0].fs_P4210_W4210A.data.gridData.rowset[0] ? jdeJson.ServiceRequest1.forms[0].fs_P4210_W4210A.data.gridData.rowset[0].z_UITM_89.value : 'None'}
+                </div>
+            `;
         }
     </script>
 </body>

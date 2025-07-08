@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Format Test - BOL Scanner</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .format-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        .format-section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .json-output {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ced4da;
+        }
+        .test-data {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #c3e6cb;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .validation-results {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            border: 1px solid #ffeaa7;
+        }
+        .validation-item {
+            margin-bottom: 8px;
+            padding: 5px 10px;
+            border-radius: 3px;
+        }
+        .validation-pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .validation-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .nav-links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .nav-links a {
+            margin: 0 10px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 JSON Format Test</h1>
+        <p>Test and compare JDE JSON formats to ensure proper field structure</p>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Data</h2>
+        <div class="test-data">
+            <strong>Sample BOL Data:</strong><br>
+            BOL Number: BOL12345<br>
+            Trailer Number: TRL789<br>
+            Lines: 2<br>
+            Items: ITEM001 (Qty: 100, PO: PO12345), ITEM002 (Qty: 50, PO: PO67890)
+        </div>
+        
+        <button class="button" onclick="generateJsonFormats()">Generate JSON Formats</button>
+        
+        <div class="comparison-grid" id="comparison-grid" style="display: none;">
+            <div class="format-section">
+                <h3>New Format (With Field Objects)</h3>
+                <div class="json-output" id="new-format-output"></div>
+            </div>
+            
+            <div class="format-section">
+                <h3>Old Format (Direct Values)</h3>
+                <div class="json-output" id="old-format-output"></div>
+            </div>
+        </div>
+        
+        <div class="validation-results" id="validation-results" style="display: none;"></div>
+    </div>
+
+    <div class="nav-links">
+        <a href="index.html">← Back to Scanner</a>
+        <a href="manual-entry.html">Manual Entry</a>
+        <a href="test.html">Run Tests</a>
+        <a href="jde-analyzer.html">JDE Analyzer</a>
+    </div>
+
+    <script src="jde-config.js"></script>
+    <script>
+        const testData = {
+            BOL_NUMBER: 'BOL12345',
+            TRAILER_NUMBER: 'TRL789',
+            LINES: 2,
+            ITEMS: [
+                {
+                    ITEM_NUMBER: 'ITEM001',
+                    QUANTITY: 100,
+                    PO_NUMBER: 'PO12345'
+                },
+                {
+                    ITEM_NUMBER: 'ITEM002',
+                    QUANTITY: 50,
+                    PO_NUMBER: 'PO67890'
+                }
+            ]
+        };
+        
+        function validateJDEData(parsedData) {
+            const validatedData = {
+                BOL_NUMBER: parsedData.BOL_NUMBER || '',
+                TRAILER_NUMBER: parsedData.TRAILER_NUMBER || '',
+                LINES: parsedData.LINES || 0,
+                ITEMS: []
+            };
+            
+            if (parsedData.ITEMS && parsedData.ITEMS.length > 0) {
+                parsedData.ITEMS.forEach((item, index) => {
+                    const validatedItem = {
+                        ITEM_NUMBER: (item.ITEM_NUMBER || '').toString().trim(),
+                        QUANTITY: parseInt(item.QUANTITY) || 0,
+                        PO_NUMBER: (item.PO_NUMBER || '').toString().trim()
+                    };
+                    
+                    if (validatedItem.ITEM_NUMBER && validatedItem.QUANTITY > 0) {
+                        validatedData.ITEMS.push(validatedItem);
+                    }
+                });
+            }
+            
+            return validatedData;
+        }
+        
+        function generateNewFormat(parsedData) {
+            const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
+            const validatedData = validateJDEData(parsedData);
+            
+            const rowset = validatedData.ITEMS.map((item, index) => ({
+                "z_DRQJ_165": {
+                    "title": "Requested Date",
+                    "value": currentDate
+                },
+                "z_UOM_52": {
+                    "title": "UoM",
+                    "value": JDE_CONFIG.defaults.unitOfMeasure
+                },
+                "z_UORG_53": {
+                    "title": "Quantity Ordered",
+                    "value": item.QUANTITY
+                },
+                "z_VR01_608": {
+                    "title": "Customer PO",
+                    "value": item.PO_NUMBER
+                },
+                "z_UNCS_836": {
+                    "title": "Purchase Order Unit Cost",
+                    "value": JDE_CONFIG.defaults.unitCost
+                },
+                "z_UITM_89": {
+                    "title": "Item Number",
+                    "value": item.ITEM_NUMBER
+                },
+                "rowIndex": index
+            }));
+            
+            return {
+                "ServiceRequest1": {
+                    "forms": [
+                        {
+                            "fs_P4210_W4210A": {
+                                "title": "Sales Order Detail Revisions",
+                                "data": {
+                                    "z_MCU_11": {
+                                        "title": "Business Unit",
+                                        "value": JDE_CONFIG.defaults.businessUnit
+                                    },
+                                    "z_DCTO_21": {
+                                        "title": "Order Type",
+                                        "value": JDE_CONFIG.defaults.orderType
+                                    },
+                                    "z_TRDJ_748": {
+                                        "title": "Date - Order/Transaction",
+                                        "value": currentDate
+                                    },
+                                    "z_DOCO_757": {
+                                        "title": "Document (Order No, Invoice, etc.)",
+                                        "value": validatedData.BOL_NUMBER || ""
+                                    },
+                                    "z_ALKY_800": {
+                                        "title": "Long Address Number",
+                                        "value": JDE_CONFIG.defaults.addressNumber1
+                                    },
+                                    "z_ALKY_802": {
+                                        "title": "Long Address Number",
+                                        "value": JDE_CONFIG.defaults.addressNumber2
+                                    },
+                                    "gridData": {
+                                        "id": 1,
+                                        "fullGridId": "1",
+                                        "columns": {
+                                            "z_DRQJ_165": "Requested Date",
+                                            "z_UOM_52": "UoM",
+                                            "z_UORG_53": "Quantity Ordered",
+                                            "z_VR01_608": "Customer PO",
+                                            "z_UNCS_836": "Purchase Order Unit Cost",
+                                            "z_UITM_89": "Item Number"
+                                        },
+                                        "rowset": rowset,
+                                        "summary": {
+                                            "records": rowset.length,
+                                            "moreRecords": false
+                                        }
+                                    }
+                                },
+                                "errors": [],
+                                "warnings": []
+                            }
+                        }
+                    ]
+                }
+            };
+        }
+        
+        function generateOldFormat(parsedData) {
+            const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
+            const validatedData = validateJDEData(parsedData);
+            
+            const rowset = validatedData.ITEMS.map(item => ({
+                "z_DRQJ_165": currentDate,
+                "z_UOM_52": JDE_CONFIG.defaults.unitOfMeasure,
+                "z_UORG_53": item.QUANTITY,
+                "z_VR01_608": item.PO_NUMBER,
+                "z_UNCS_836": JDE_CONFIG.defaults.unitCost,
+                "z_UITM_89": item.ITEM_NUMBER
+            }));
+            
+            return {
+                "ServiceRequest1": {
+                    "forms": [
+                        {
+                            "fs_P4210_W4210A": {
+                                "title": "Sales Order Detail Revisions",
+                                "data": {
+                                    "z_MCU_11": {
+                                        "title": "Business Unit",
+                                        "value": JDE_CONFIG.defaults.businessUnit
+                                    },
+                                    "z_DCTO_21": {
+                                        "title": "Order Type",
+                                        "value": JDE_CONFIG.defaults.orderType
+                                    },
+                                    "z_TRDJ_748": {
+                                        "title": "Date - Order/Transaction",
+                                        "value": currentDate
+                                    },
+                                    "z_DOCO_757": {
+                                        "title": "Document (Order No, Invoice, etc.)",
+                                        "value": validatedData.BOL_NUMBER || ""
+                                    },
+                                    "z_ALKY_800": {
+                                        "title": "Long Address Number",
+                                        "value": JDE_CONFIG.defaults.addressNumber1
+                                    },
+                                    "z_ALKY_802": {
+                                        "title": "Long Address Number",
+                                        "value": JDE_CONFIG.defaults.addressNumber2
+                                    },
+                                    "gridData": {
+                                        "id": 1,
+                                        "fullGridId": "1",
+                                        "columns": {
+                                            "z_DRQJ_165": "Requested Date",
+                                            "z_UOM_52": "UoM",
+                                            "z_UORG_53": "Quantity Ordered",
+                                            "z_VR01_608": "Customer PO",
+                                            "z_UNCS_836": "Purchase Order Unit Cost",
+                                            "z_UITM_89": "Item Number"
+                                        },
+                                        "rowset": rowset,
+                                        "summary": {
+                                            "records": rowset.length,
+                                            "moreRecords": false
+                                        }
+                                    }
+                                },
+                                "errors": [],
+                                "warnings": []
+                            }
+                        }
+                    ]
+                }
+            };
+        }
+        
+        function validateJsonStructure(jsonData) {
+            const validations = [];
+            
+            try {
+                const form = jsonData.ServiceRequest1.forms[0].fs_P4210_W4210A;
+                const data = form.data;
+                
+                // Check main fields
+                const businessUnit = data.z_MCU_11.value;
+                validations.push({
+                    field: 'Business Unit (z_MCU_11)',
+                    value: businessUnit,
+                    valid: businessUnit && businessUnit.trim() !== '' && businessUnit !== ' ',
+                    expected: JDE_CONFIG.defaults.businessUnit
+                });
+                
+                const date = data.z_TRDJ_748.value;
+                validations.push({
+                    field: 'Date (z_TRDJ_748)',
+                    value: date,
+                    valid: date && date !== null && date.length === 8,
+                    expected: 'YYYYMMDD format'
+                });
+                
+                const address1 = data.z_ALKY_800.value;
+                validations.push({
+                    field: 'Address Number 1 (z_ALKY_800)',
+                    value: address1,
+                    valid: address1 && address1.trim() !== '' && address1 !== ' ',
+                    expected: JDE_CONFIG.defaults.addressNumber1
+                });
+                
+                const address2 = data.z_ALKY_802.value;
+                validations.push({
+                    field: 'Address Number 2 (z_ALKY_802)',
+                    value: address2,
+                    valid: address2 && address2.trim() !== '' && address2 !== ' ',
+                    expected: JDE_CONFIG.defaults.addressNumber2
+                });
+                
+                // Check grid data
+                const gridData = data.gridData;
+                validations.push({
+                    field: 'Grid Data Rowset',
+                    value: `${gridData.rowset.length} items`,
+                    valid: gridData.rowset && gridData.rowset.length > 0,
+                    expected: 'At least 1 item'
+                });
+                
+                if (gridData.rowset && gridData.rowset.length > 0) {
+                    const firstItem = gridData.rowset[0];
+                    validations.push({
+                        field: 'First Item Number',
+                        value: firstItem.z_UITM_89 ? firstItem.z_UITM_89.value : firstItem.z_UITM_89,
+                        valid: firstItem.z_UITM_89 && (firstItem.z_UITM_89.value || firstItem.z_UITM_89),
+                        expected: 'Valid item number'
+                    });
+                }
+                
+            } catch (error) {
+                validations.push({
+                    field: 'JSON Structure',
+                    value: 'Error parsing JSON',
+                    valid: false,
+                    expected: 'Valid JSON structure'
+                });
+            }
+            
+            return validations;
+        }
+        
+        function generateJsonFormats() {
+            const newFormat = generateNewFormat(testData);
+            const oldFormat = generateOldFormat(testData);
+            
+            document.getElementById('new-format-output').textContent = JSON.stringify(newFormat, null, 2);
+            document.getElementById('old-format-output').textContent = JSON.stringify(oldFormat, null, 2);
+            
+            // Show validation results
+            const validations = validateJsonStructure(newFormat);
+            const validationHtml = validations.map(v => 
+                `<div class="validation-item ${v.valid ? 'validation-pass' : 'validation-fail'}">
+                    <strong>${v.field}:</strong> ${v.value} ${v.valid ? '✓' : '✗'}<br>
+                    <small>Expected: ${v.expected}</small>
+                </div>`
+            ).join('');
+            
+            document.getElementById('validation-results').innerHTML = 
+                `<h3>Validation Results</h3>${validationHtml}`;
+            
+            document.getElementById('comparison-grid').style.display = 'grid';
+            document.getElementById('validation-results').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

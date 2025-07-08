@@ -191,18 +191,68 @@ class ManualEntryForm {
         return data;
     }
     
+    validateJDEData(parsedData) {
+        // Create a copy of the data to avoid modifying the original
+        const validatedData = {
+            BOL_NUMBER: parsedData.BOL_NUMBER || '',
+            TRAILER_NUMBER: parsedData.TRAILER_NUMBER || '',
+            LINES: parsedData.LINES || 0,
+            ITEMS: []
+        };
+        
+        // Validate and format items
+        if (parsedData.ITEMS && parsedData.ITEMS.length > 0) {
+            parsedData.ITEMS.forEach((item, index) => {
+                const validatedItem = {
+                    ITEM_NUMBER: (item.ITEM_NUMBER || '').toString().trim(),
+                    QUANTITY: parseInt(item.QUANTITY) || 0,
+                    PO_NUMBER: (item.PO_NUMBER || '').toString().trim()
+                };
+                
+                // Ensure required fields are not empty
+                if (validatedItem.ITEM_NUMBER && validatedItem.QUANTITY > 0) {
+                    validatedData.ITEMS.push(validatedItem);
+                }
+            });
+        }
+        
+        return validatedData;
+    }
+    
     generateJDEJson(parsedData) {
         const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
         const timestamp = new Date().toISOString().slice(0, 19).replace('T', ':');
         
-        // Generate rowset for grid data
-        const rowset = parsedData.ITEMS.map(item => ({
-            "z_DRQJ_165": currentDate,
-            "z_UOM_52": JDE_CONFIG.defaults.unitOfMeasure,
-            "z_UORG_53": item.QUANTITY,
-            "z_VR01_608": item.PO_NUMBER,
-            "z_UNCS_836": JDE_CONFIG.defaults.unitCost,
-            "z_UITM_89": item.ITEM_NUMBER
+        // Validate and format data before creating JSON
+        const validatedData = this.validateJDEData(parsedData);
+        
+        // Generate rowset for grid data with proper JDE field format
+        const rowset = validatedData.ITEMS.map((item, index) => ({
+            "z_DRQJ_165": {
+                "title": "Requested Date",
+                "value": currentDate
+            },
+            "z_UOM_52": {
+                "title": "UoM",
+                "value": JDE_CONFIG.defaults.unitOfMeasure
+            },
+            "z_UORG_53": {
+                "title": "Quantity Ordered",
+                "value": item.QUANTITY
+            },
+            "z_VR01_608": {
+                "title": "Customer PO",
+                "value": item.PO_NUMBER
+            },
+            "z_UNCS_836": {
+                "title": "Purchase Order Unit Cost",
+                "value": JDE_CONFIG.defaults.unitCost
+            },
+            "z_UITM_89": {
+                "title": "Item Number",
+                "value": item.ITEM_NUMBER
+            },
+            "rowIndex": index
         }));
         
         const jdeJson = {
@@ -226,7 +276,7 @@ class ManualEntryForm {
                                 },
                                 "z_DOCO_757": {
                                     "title": "Document (Order No, Invoice, etc.)",
-                                    "value": parsedData.BOL_NUMBER || 0
+                                    "value": validatedData.BOL_NUMBER || ""
                                 },
                                 "z_ALKY_800": {
                                     "title": "Long Address Number",
@@ -259,20 +309,21 @@ class ManualEntryForm {
                         },
                         "stackId": 21,
                         "stateId": 1,
-                        "rid": "d1917f53c7ea9eb3",
+                        "rid": this.generateRID(),
                         "currentApp": "P4210_W4210A_DETPCA01",
                         "timeStamp": timestamp,
                         "sysErrors": []
                     }
                 ]
-            },
-            "jde__status": "SUCCESS",
-            "jde__startTimestamp": new Date().toISOString(),
-            "jde__endTimestamp": new Date(Date.now() + 2000).toISOString(),
-            "jde__serverExecutionSeconds": 2.151
+            }
         };
         
         return jdeJson;
+    }
+    
+    generateRID() {
+        // Generate a random request ID similar to JDE format
+        return Math.random().toString(16).substr(2, 16);
     }
     
     generatePreview() {
