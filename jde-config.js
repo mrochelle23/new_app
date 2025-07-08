@@ -5,9 +5,12 @@ const JDE_CONFIG = {
     // JDE Orchestrator Studio endpoint
     url: 'http://rglnpweb1.jgi.local:8220/jderest/orchestrator/EnterSalesOrders',
     
+    // JDE base URL for health checks
+    baseUrl: 'http://rglnpweb1.jgi.local:8220/jderest',
+    
     // Authentication credentials
     credentials: {
-        email: 'mrochelle@jamesgroupintl.com',
+        username: 'mrochelle',
         password: 'wywxi8-qefdez'
     },
     
@@ -32,7 +35,7 @@ const JDE_CONFIG = {
 
 // Helper function to get authorization header
 function getAuthHeader() {
-    return 'Basic ' + btoa(JDE_CONFIG.credentials.email + ':' + JDE_CONFIG.credentials.password);
+    return 'Basic ' + btoa(JDE_CONFIG.credentials.username + ':' + JDE_CONFIG.credentials.password);
 }
 
 // Helper function to get JDE headers
@@ -49,15 +52,27 @@ function getJDEHeaders() {
 // Helper function to check network connectivity
 async function checkNetworkConnectivity() {
     try {
-        // First check if we can reach the JDE server
-        const response = await fetch(JDE_CONFIG.url.replace('/jderest/orchestrator/EnterSalesOrders', ''), {
-            method: 'HEAD',
-            mode: 'no-cors',
-            cache: 'no-cache'
+        // Try to reach the JDE base URL instead of specific endpoint
+        const response = await fetch(JDE_CONFIG.baseUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': getAuthHeader()
+            },
+            signal: AbortSignal.timeout(10000)
         });
-        return true;
+        
+        // 200-299 range means server is reachable
+        // 401/403 means server is reachable but auth issues
+        // 404 might be normal for base URL
+        return response.status < 500;
+        
     } catch (error) {
-        return false;
+        // If it's a network error (can't reach server), return false
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            return false;
+        }
+        // For other errors (like timeout), assume server is reachable
+        return true;
     }
 }
 
@@ -78,7 +93,28 @@ async function callJDEAPI(jsonData) {
         
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`JDE API Error ${response.status}: ${errorText}`);
+            
+            // Try to parse JSON error response
+            let errorMessage = errorText;
+            try {
+                const errorJson = JSON.parse(errorText);
+                if (errorJson.message) {
+                    errorMessage = errorJson.message;
+                }
+            } catch (e) {
+                // Use raw text if JSON parsing fails
+            }
+            
+            // Provide specific error messages based on status code
+            if (response.status === 401) {
+                throw new Error(`Authentication failed: ${errorMessage}. Please check your credentials.`);
+            } else if (response.status === 403) {
+                throw new Error(`Access denied: ${errorMessage}. Please verify your user permissions and credentials.`);
+            } else if (response.status === 404) {
+                throw new Error(`JDE endpoint not found: ${errorMessage}. Please verify the orchestrator URL.`);
+            } else {
+                throw new Error(`JDE API Error ${response.status}: ${errorMessage}`);
+            }
         }
         
         const result = await response.json();

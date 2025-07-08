@@ -46,22 +46,44 @@ class NetworkStatus {
         if (!indicator || !text) return;
         
         try {
-            // Try to reach the JDE server
-            const response = await fetch(JDE_CONFIG.url.replace('/jderest/orchestrator/EnterSalesOrders', ''), {
-                method: 'HEAD',
-                mode: 'no-cors',
-                cache: 'no-cache',
-                signal: AbortSignal.timeout(5000)
+            // Try to reach the JDE base URL with authentication
+            const response = await fetch(JDE_CONFIG.baseUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': getAuthHeader()
+                },
+                signal: AbortSignal.timeout(10000)
             });
             
-            this.isJDEReachable = true;
-            indicator.style.background = '#28a745';
-            text.textContent = 'JDE Server: Online';
+            // Server is reachable if we get any response (even 404 is OK for base URL)
+            if (response.status < 500) {
+                this.isJDEReachable = true;
+                
+                if (response.status === 200) {
+                    indicator.style.background = '#28a745';
+                    text.textContent = 'JDE Server: Online';
+                } else if (response.status === 401 || response.status === 403) {
+                    indicator.style.background = '#ffc107';
+                    text.textContent = 'JDE Server: Auth Issue';
+                } else {
+                    indicator.style.background = '#28a745';
+                    text.textContent = 'JDE Server: Reachable';
+                }
+            } else {
+                this.isJDEReachable = false;
+                indicator.style.background = '#dc3545';
+                text.textContent = 'JDE Server: Server Error';
+            }
             
         } catch (error) {
             this.isJDEReachable = false;
             indicator.style.background = '#dc3545';
-            text.textContent = 'JDE Server: Offline';
+            
+            if (error.name === 'AbortError') {
+                text.textContent = 'JDE Server: Timeout';
+            } else {
+                text.textContent = 'JDE Server: Offline';
+            }
         }
     }
     
