@@ -8,11 +8,8 @@ const JDE_CONFIG = {
     // JDE base URL for health checks
     baseUrl: 'http://rglnpweb1.jgi.local:8220/jderest',
     
-    // Authentication credentials
-    credentials: {
-        username: 'mrochelle',
-        password: 'hozde6-kyks'
-    },
+    // Authentication credentials (now provided by user)
+    // credentials removed for security - user must provide credentials via modal
     
     // JDE environment settings
     environment: 'JDV920',
@@ -58,15 +55,18 @@ const JDE_CONFIG = {
 };
 
 // Helper function to get authorization header
-function getAuthHeader() {
-    return 'Basic ' + btoa(JDE_CONFIG.credentials.username + ':' + JDE_CONFIG.credentials.password);
+function getAuthHeader(credentials) {
+    if (!credentials || !credentials.username || !credentials.password) {
+        throw new Error('Credentials are required for JDE authentication');
+    }
+    return 'Basic ' + btoa(credentials.username + ':' + credentials.password);
 }
 
 // Helper function to get JDE headers
-function getJDEHeaders() {
+function getJDEHeaders(credentials) {
     return {
         'Content-Type': 'application/json',
-        'Authorization': getAuthHeader(),
+        'Authorization': getAuthHeader(credentials),
         'X-JDE-Environment': JDE_CONFIG.environment,
         'X-JDE-Device': JDE_CONFIG.device,
         'X-JDE-Role': JDE_CONFIG.role
@@ -74,14 +74,17 @@ function getJDEHeaders() {
 }
 
 // Helper function to check network connectivity
-async function checkNetworkConnectivity() {
+async function checkNetworkConnectivity(credentials = null) {
     try {
+        const headers = {};
+        if (credentials) {
+            headers['Authorization'] = getAuthHeader(credentials);
+        }
+        
         // Try to reach the JDE base URL instead of specific endpoint
         const response = await fetch(JDE_CONFIG.baseUrl, {
             method: 'GET',
-            headers: {
-                'Authorization': getAuthHeader()
-            },
+            headers: headers,
             signal: AbortSignal.timeout(10000)
         });
         
@@ -101,14 +104,18 @@ async function checkNetworkConnectivity() {
 }
 
 // Helper function to make JDE API calls with error handling
-async function callJDEAPI(jsonData) {
+async function callJDEAPI(jsonData, credentials) {
+    if (!credentials) {
+        throw new Error('User credentials are required to submit to JDE');
+    }
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), JDE_CONFIG.timeout);
     
     try {
         const response = await fetch(JDE_CONFIG.url, {
             method: 'POST',
-            headers: getJDEHeaders(),
+            headers: getJDEHeaders(credentials),
             body: JSON.stringify(jsonData),
             signal: controller.signal
         });

@@ -36,7 +36,7 @@ class ManualEntryForm {
         
         this.form.addEventListener('submit', (e) => {
             e.preventDefault();
-            this.submitToJDE();
+            this.requestCredentialsAndSubmit();
         });
         
         this.linesInput.addEventListener('input', () => {
@@ -345,20 +345,36 @@ class ManualEntryForm {
         }
     }
     
-    async submitToJDE() {
+    requestCredentialsAndSubmit() {
+        // Validate form first
         const errors = this.validateForm();
         if (errors.length > 0) {
             this.showError('Please fix the following errors:\n' + errors.join('\n'));
             return;
         }
-        
+
+        // Show credentials modal before submitting
+        window.credentialsModal.show({
+            title: '🔐 JDE Authentication Required',
+            message: 'Please enter your JDE credentials to submit the manual entry data',
+            onSuccess: (credentials) => {
+                this.submitToJDE(credentials);
+            },
+            onCancel: () => {
+                this.showError('Submission cancelled. Please provide credentials to submit to JDE.');
+            }
+        });
+    }
+
+    async submitToJDE(credentials) {
+        // Form validation is already done in requestCredentialsAndSubmit
         try {
             this.showLoading();
             this.submitBtn.disabled = true;
             
             // Check network connectivity first
             this.showSuccess('Checking network connectivity...');
-            const isConnected = await checkNetworkConnectivity();
+            const isConnected = await checkNetworkConnectivity(credentials);
             
             if (!isConnected) {
                 throw new Error('Cannot reach JDE server. Please ensure you are connected to the company network or VPN.');
@@ -369,8 +385,8 @@ class ManualEntryForm {
             
             this.showSuccess('Submitting to JDE Orchestrator Studio...');
             
-            // Use the JDE configuration helper
-            const result = await callJDEAPI(jdeJson);
+            // Use the JDE configuration helper with user credentials
+            const result = await callJDEAPI(jdeJson, credentials);
             
             this.showSuccess('Successfully submitted to JDE Orchestrator Studio!');
             console.log('JDE Response:', result);

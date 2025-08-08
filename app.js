@@ -46,7 +46,7 @@ class BarcodeParser {
         });
         
         this.submitBtn.addEventListener('click', () => {
-            this.submitToJDE();
+            this.requestCredentialsAndSubmit();
         });
     }
     
@@ -67,9 +67,9 @@ class BarcodeParser {
             this.showSuccess('Barcode processed successfully!');
             this.submitBtn.style.display = 'inline-block';
             
-            // Auto-submit after 2 seconds
+            // Auto-submit after 2 seconds (but will prompt for credentials first)
             setTimeout(() => {
-                this.submitToJDE();
+                this.requestCredentialsAndSubmit();
             }, 2000);
             
         } catch (error) {
@@ -314,14 +314,28 @@ class BarcodeParser {
         this.jsonOutput.style.display = 'block';
     }
     
-    async submitToJDE() {
+    requestCredentialsAndSubmit() {
+        // Show credentials modal before submitting
+        window.credentialsModal.show({
+            title: '🔐 JDE Authentication Required',
+            message: 'Please enter your JDE credentials to submit the barcode data',
+            onSuccess: (credentials) => {
+                this.submitToJDE(credentials);
+            },
+            onCancel: () => {
+                this.showError('Submission cancelled. Please provide credentials to submit to JDE.');
+            }
+        });
+    }
+
+    async submitToJDE(credentials) {
         try {
             this.showLoading();
             this.submitBtn.disabled = true;
             
             // Check network connectivity first
             this.showSuccess('Checking network connectivity...');
-            const isConnected = await checkNetworkConnectivity();
+            const isConnected = await checkNetworkConnectivity(credentials);
             
             if (!isConnected) {
                 throw new Error('Cannot reach JDE server. Please ensure you are connected to the company network or VPN.');
@@ -331,8 +345,8 @@ class BarcodeParser {
             
             this.showSuccess('Submitting to JDE Orchestrator Studio...');
             
-            // Use the JDE configuration helper
-            const result = await callJDEAPI(jsonData);
+            // Use the JDE configuration helper with user credentials
+            const result = await callJDEAPI(jsonData, credentials);
             
             this.showSuccess('Successfully submitted to JDE Orchestrator Studio!');
             console.log('JDE Response:', result);
